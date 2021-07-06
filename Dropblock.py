@@ -1,5 +1,6 @@
 import keras
 import keras.backend as K
+from keras.utils.conv_utils import normalize_data_format
 
 class DropBlock1D(keras.layers.Layer):
     """See: https://arxiv.org/pdf/1810.12890.pdf"""
@@ -116,7 +117,7 @@ class DropBlock2D(keras.layers.Layer):
         self.block_size = block_size
         self.keep_prob = keep_prob
         self.sync_channels = sync_channels
-        self.data_format = K.normalize_data_format(data_format)
+        self.data_format = normalize_data_format(data_format)
         self.input_spec = keras.engine.base_layer.InputSpec(ndim=4)
         self.supports_masking = True
 
