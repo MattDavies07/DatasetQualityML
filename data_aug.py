@@ -1,10 +1,12 @@
 import os
 import numpy as np
+import pandas as pd
 import cv2
 from glob import glob
 from tqdm import tqdm
 import imageio
 from albumentations import HorizontalFlip, VerticalFlip, Rotate
+from clustering import getOutliers
 
 """ Create a directory """
 def create_dir(path):
@@ -68,6 +70,7 @@ def augment_data(images, masks, save_path, augment=True):
 
             cv2.imwrite(image_path, i)
             cv2.imwrite(mask_path, m)
+            #print("here" + str(index))
 
             index += 1
 
@@ -78,6 +81,31 @@ if __name__ == "__main__":
     """ Load the data """
     data_path = "data/"
     (train_x, train_y), (test_x, test_y) = load_data(data_path)
+
+    print(train_x)
+    print(train_y)
+    print()
+
+    """ Apply clustering threshold """
+    metric_data = pd.read_csv('data/training/pre_training_metrics.csv')
+    outliers = getOutliers(metric_data)
+    print(outliers)
+    for i, file in enumerate(train_x):
+        filename = os.path.basename(train_x[i])
+        if filename in outliers:
+            print(train_x[i])
+            print(filename)
+            train_x.pop(i)
+            mask_path = 'data/training/1st_manual'
+            mask_file = filename[:2] + '_manual1.gif'
+            mask = os.path.join(mask_path, mask_file)
+            print(mask)
+            print(train_y.pop(i))
+
+    """ Apply intensity measure """
+
+
+    """ Apply gradient measure"""
 
     print(f"Train: {len(train_x)} - {len(train_y)}")
     print(f"Test: {len(test_x)} - {len(test_y)}")
