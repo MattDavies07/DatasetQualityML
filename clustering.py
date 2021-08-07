@@ -5,7 +5,6 @@ from sklearn import cluster
 from scipy.spatial.distance import cdist
 import pickle
 
-#TODO - split up methods in clustering to avoid retraining
 #TODO - Reference Code
 
 def dataPreprocess():

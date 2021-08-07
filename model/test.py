@@ -65,11 +65,13 @@ if __name__ == "__main__":
     seeding(42)
 
     """ Folders """
-    create_dir("results")
+    exp_datetime = time.strftime("%Y%m%d-%H%M%S")
+    exp_folder = "results/" + exp_datetime + "/"
+    create_dir(exp_folder)
 
     """ Load dataset """
-    test_x = sorted(glob("../new_data/test/image/*"))
-    test_y = sorted(glob("../new_data/test/mask/*"))
+    test_x = sorted(glob("../exp_data/test/image/*"))
+    test_y = sorted(glob("../exp_data/test/mask/*"))
 
     """ Hyperparameters """
     H = 512
@@ -137,7 +139,7 @@ if __name__ == "__main__":
         cat_images = np.concatenate(
             [image, line, ori_mask, line, pred_y * 255], axis=1
         )
-        cv2.imwrite(f"results/{name}.png", cat_images)
+        cv2.imwrite(exp_folder + f"{name}.png", cat_images)
 
     jaccard = metrics_score[0]/len(test_x)
     f1 = metrics_score[1]/len(test_x)
