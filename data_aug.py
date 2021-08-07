@@ -12,6 +12,10 @@ from clustering import getOutliers
 def create_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
+    else:
+        files = glob(path + '*')
+        for f in files:
+            os.remove(f)
 
 def load_data(path):
     train_x = sorted(glob(os.path.join(path, "training", "images", "*.tif")))
@@ -82,25 +86,27 @@ if __name__ == "__main__":
     data_path = "data/"
     (train_x, train_y), (test_x, test_y) = load_data(data_path)
 
-    print(train_x)
-    print(train_y)
-    print()
+    """ Create directories to save the augmented data """
+    create_dir("exp_data/train/image/")
+    create_dir("exp_data/train/mask/")
+    create_dir("exp_data/test/image/")
+    create_dir("exp_data/test/mask/")
 
     """ Apply clustering threshold """
     metric_data = pd.read_csv('data/training/pre_training_metrics.csv')
     outliers = getOutliers(metric_data)
-    print(outliers)
+    delImgArr = []
     for i, file in enumerate(train_x):
-        filename = os.path.basename(train_x[i])
+        filename = os.path.basename(file)
         if filename in outliers:
-            print(train_x[i])
-            print(filename)
-            train_x.pop(i)
-            mask_path = 'data/training/1st_manual'
-            mask_file = filename[:2] + '_manual1.gif'
-            mask = os.path.join(mask_path, mask_file)
-            print(mask)
-            print(train_y.pop(i))
+            delImgArr.append(file)
+    for i in delImgArr:
+        train_x.remove(i)
+        filename = os.path.basename(i)
+        mask_path = 'data/training/1st_manual'
+        mask_file = filename[:2] + '_manual1.gif'
+        mask = os.path.join(mask_path, mask_file)
+        train_y.remove(mask)
 
     """ Apply intensity measure """
 
@@ -110,12 +116,7 @@ if __name__ == "__main__":
     print(f"Train: {len(train_x)} - {len(train_y)}")
     print(f"Test: {len(test_x)} - {len(test_y)}")
 
-    """ Create directories to save the augmented data """
-    create_dir("exp_data/train/image/")
-    create_dir("exp_data/train/mask/")
-    create_dir("exp_data/test/image/")
-    create_dir("exp_data/test/mask/")
 
     """ Data augmentation """
-    augment_data(train_x, train_y, "exp_data/train/", augment=False)
-    augment_data(test_x, test_y, "exp_data/test/", augment=False)
+    #augment_data(train_x, train_y, "exp_data/train/", augment=False)
+    #augment_data(test_x, test_y, "exp_data/test/", augment=False)

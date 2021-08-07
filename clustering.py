@@ -44,7 +44,7 @@ def getOutliers(data):
 	km = pickle.load(open('finalised_clustering.sav', 'rb'))
 	clusters = km.predict(X)
 	centroids = km.cluster_centers_
-	print(centroids)
+	#print(centroids)
 	# points array will be used to reach the index easy
 	points = np.empty((0,len(X[0])), float)
 	# distances will be used to calculate outliers
@@ -58,7 +58,7 @@ def getOutliers(data):
 	percentile = 80
 	# getting outliers whose distances are greater than some percentile
 	outliers = points[np.where(distances > np.percentile(distances, percentile))]
-	print(outliers)
+	#print(outliers)
 	outliersArr = []
 	for index, row in data.iterrows():
 		for entry in outliers:
