@@ -74,7 +74,6 @@ def augment_data(images, masks, save_path, augment=True):
 
             cv2.imwrite(image_path, i)
             cv2.imwrite(mask_path, m)
-            #print("here" + str(index))
 
             index += 1
 
@@ -118,5 +117,5 @@ if __name__ == "__main__":
 
 
     """ Data augmentation """
-    #augment_data(train_x, train_y, "exp_data/train/", augment=False)
-    #augment_data(test_x, test_y, "exp_data/test/", augment=False)
+    augment_data(train_x, train_y, "exp_data/train/", augment=False)
+    augment_data(test_x, test_y, "exp_data/test/", augment=False)
