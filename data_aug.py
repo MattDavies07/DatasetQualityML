@@ -29,7 +29,7 @@ def load_data(path):
 
     return (train_x, train_y), (test_x, test_y)
 
-def augment_data(images, masks, save_path, augment=True, gradient=False):
+def augment_data(images, masks, save_path, augment=True, gradient=False, intensity=False):
     size = (512, 512)
     neighbourhood = disk(1)
 
@@ -51,6 +51,10 @@ def augment_data(images, masks, save_path, augment=True, gradient=False):
             mask = updated == 0
             updated[mask] = y[mask]
             y = updated
+
+        if intensity == True:
+            boundaries = find_boundaries(y)
+            y[boundaries == 1] = 255 - (255 - x[boundaries == 1])
 
         # Augmentation as small dataset
         if augment == True:
@@ -126,13 +130,10 @@ if __name__ == "__main__":
 
     """ Apply intensity measure """
 
-
-    """ Apply gradient measure"""
-
     print(f"Train: {len(train_x)} - {len(train_y)}")
     print(f"Test: {len(test_x)} - {len(test_y)}")
 
 
     """ Data augmentation """
-    augment_data(train_x, train_y, "exp_data/train/", augment=False, gradient=True)
-    augment_data(test_x, test_y, "exp_data/test/", augment=False, gradient=False) # don't apply augmentation to testing
+    augment_data(train_x, train_y, "exp_data/train/", augment=False, gradient=False, intensity=True)
+    augment_data(test_x, test_y, "exp_data/test/", augment=False, gradient=False, intensity=False) # don't apply augmentation to testing
