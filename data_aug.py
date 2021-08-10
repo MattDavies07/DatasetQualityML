@@ -6,6 +6,9 @@ from glob import glob
 from tqdm import tqdm # used as progress bar
 import imageio
 from albumentations import HorizontalFlip, VerticalFlip, Rotate
+from skimage.segmentation import find_boundaries
+from skimage.filters.rank import gradient
+from skimage.morphology import disk, erosion, dilation
 from clustering import getOutliers
 
 """ Create a directory """
@@ -26,8 +29,9 @@ def load_data(path):
 
     return (train_x, train_y), (test_x, test_y)
 
-def augment_data(images, masks, save_path, augment=True):
+def augment_data(images, masks, save_path, augment=True, gradient=False):
     size = (512, 512)
+    neighbourhood = disk(1)
 
     for idx, (x, y) in tqdm(enumerate(zip(images, masks)), total=len(images)):
         """ Extracting the name """
@@ -37,6 +41,16 @@ def augment_data(images, masks, save_path, augment=True):
         x = cv2.imread(x, cv2.IMREAD_COLOR)
         x = cv2.cvtColor(x, cv2.COLOR_BGR2GRAY)
         y = imageio.mimread(y)[0] #use imageio library instead
+
+        if gradient == True:
+            boundaries = find_boundaries(y)
+            eroded = erosion(x, neighbourhood)
+            dilated = dilation(x, neighbourhood)
+            grad = dilated - eroded
+            updated = grad * boundaries
+            mask = updated == 0
+            updated[mask] = y[mask]
+            y = updated
 
         # Augmentation as small dataset
         if augment == True:
@@ -120,5 +134,5 @@ if __name__ == "__main__":
 
 
     """ Data augmentation """
-    augment_data(train_x, train_y, "exp_data/train/", augment=False)
-    augment_data(test_x, test_y, "exp_data/test/", augment=False) # don't apply augmentation to testing
+    augment_data(train_x, train_y, "exp_data/train/", augment=False, gradient=True)
+    augment_data(test_x, test_y, "exp_data/test/", augment=False, gradient=False) # don't apply augmentation to testing
