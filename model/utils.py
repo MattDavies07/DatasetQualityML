@@ -7,7 +7,7 @@ import cv2
 import torch
 
 """ Seeding the randomness. """
-def seeding(seed):
+def seeding(seed): # use same randomness every time (intial values are random)
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)

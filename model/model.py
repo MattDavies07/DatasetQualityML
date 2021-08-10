@@ -2,34 +2,34 @@ import torch
 import torch.nn as nn
 
 class conv_block(nn.Module):
-    def __init__(self, in_c, out_c):
+    def __init__(self, in_c, out_c): #input channels and output channels
         super().__init__()
 
-        self.conv1 = nn.Conv2d(in_c, out_c, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm2d(out_c)
+        self.conv1 = nn.Conv2d(in_c, out_c, kernel_size=3, padding=1) #1st convolutional layer (3x3)
+        self.bn1 = nn.BatchNorm2d(out_c) #batch normalisation
 
-        self.conv2 = nn.Conv2d(out_c, out_c, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(out_c, out_c, kernel_size=3, padding=1) #2nd layer
         self.bn2 = nn.BatchNorm2d(out_c)
 
-        self.relu = nn.ReLU()
+        self.relu = nn.ReLU() #relu
 
-    def forward(self, inputs):
-        x = self.conv1(inputs)
-        x = self.bn1(x)
-        x = self.relu(x)
+    def forward(self, inputs): #where all operations take place
+        x = self.conv1(inputs) #first convolution layer
+        x = self.bn1(x) #batch normalisation
+        x = self.relu(x) #relu
 
-        x = self.conv2(x)
+        x = self.conv2(x) #input is output of first layer
         x = self.bn2(x)
         x = self.relu(x)
 
         return x
 
-class encoder_block(nn.Module):
+class encoder_block(nn.Module): #convolultional layer (above) followed by max pooling
     def __init__(self, in_c, out_c):
         super().__init__()
 
         self.conv = conv_block(in_c, out_c)
-        self.pool = nn.MaxPool2d((2, 2))
+        self.pool = nn.MaxPool2d((2, 2)) #(2x2) reduces size 128 -> 64 for example (half as 2x2)
 
     def forward(self, inputs):
         x = self.conv(inputs)
@@ -41,36 +41,37 @@ class decoder_block(nn.Module):
     def __init__(self, in_c, out_c):
         super().__init__()
 
-        self.up = nn.ConvTranspose2d(in_c, out_c, kernel_size=2, stride=2, padding=0)
-        self.conv = conv_block(out_c+out_c, out_c)
+        self.up = nn.ConvTranspose2d(in_c, out_c, kernel_size=2, stride=2, padding=0) # (2x2) transpose convolution. stride of 2 to upsample
+        self.conv = conv_block(out_c+out_c, out_c) #normal conv block
 
     def forward(self, inputs, skip):
         x = self.up(inputs)
-        x = torch.cat([x, skip], axis=1)
-        x = self.conv(x)
+        x = torch.cat([x, skip], axis=1) #brings info from encoder to decoder to help feature map?
+        x = self.conv(x) #normal conv block
         return x
 
-class build_unet(nn.Module):
+class build_unet(nn.Module): #put all layers and blocks together
     def __init__(self):
         super().__init__()
 
         """ Encoder """
-        self.e1 = encoder_block(3, 64)
-        self.e2 = encoder_block(64, 128)
-        self.e3 = encoder_block(128, 256)
-        self.e4 = encoder_block(256, 512)
+        self.e1 = encoder_block(3, 64) # input = 3 channels, output = 64 channels [2, 64, 512, 512]
+        self.e2 = encoder_block(64, 128) # [2, 128, 256, 256]
+        self.e3 = encoder_block(128, 256) # [2, 256, 128, 128]
+        self.e4 = encoder_block(256, 512) # [2, 512, 64, 64]
 
         """ Bottleneck """
-        self.b = conv_block(512, 1024)
+        self.b = conv_block(512, 1024) #just conv block nothing else - bottleneck block or bridge [2, 1024, 32, 32]
 
         """ Decoder """
-        self.d1 = decoder_block(1024, 512)
-        self.d2 = decoder_block(512, 256)
-        self.d3 = decoder_block(256, 128)
-        self.d4 = decoder_block(128, 64)
+        self.d1 = decoder_block(1024, 512) #[]
+        self.d2 = decoder_block(512, 256) #[]
+        self.d3 = decoder_block(256, 128) #[]
+        self.d4 = decoder_block(128, 64) #[]
 
-        """ Classifier """
-        self.outputs = nn.Conv2d(64, 1, kernel_size=1, padding=0)
+        """ Classifier """ # to generate segmentation map
+        #output convolutional layer
+        self.outputs = nn.Conv2d(64, 1, kernel_size=1, padding=0) #output channel = 1 (as its binary seg) - generates seg mask of 512 by 512
 
     def forward(self, inputs):
         """ Encoder """
@@ -93,7 +94,7 @@ class build_unet(nn.Module):
         return outputs
 
 if __name__ == "__main__":
-    x = torch.randn((2, 3, 512, 512))
+    x = torch.randn((2, 3, 512, 512)) # 2 = batch size and 3 = channels, 512 = height, 512 = width
     f = build_unet()
     y = f(x)
     print(y.shape)

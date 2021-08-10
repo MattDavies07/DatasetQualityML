@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import cv2
 from glob import glob
-from tqdm import tqdm
+from tqdm import tqdm # used as progress bar
 import imageio
 from albumentations import HorizontalFlip, VerticalFlip, Rotate
 from clustering import getOutliers
@@ -36,8 +36,9 @@ def augment_data(images, masks, save_path, augment=True):
         """ Reading image and mask """
         x = cv2.imread(x, cv2.IMREAD_COLOR)
         x = cv2.cvtColor(x, cv2.COLOR_BGR2GRAY)
-        y = imageio.mimread(y)[0]
+        y = imageio.mimread(y)[0] #use imageio library instead
 
+        # Augmentation as small dataset
         if augment == True:
             aug = HorizontalFlip(p=1.0)
             augmented = aug(image=x, mask=y)
@@ -64,7 +65,7 @@ def augment_data(images, masks, save_path, augment=True):
         index = 0
         for i, m in zip(X, Y):
             i = cv2.resize(i, size)
-            m = cv2.resize(m, size)
+            m = cv2.resize(m, size) #interpolation = cv2.INTER_NEAREST) #This is the issue the resize changes the pixel values!!
 
             tmp_image_name = f"{name}_{index}.png"
             tmp_mask_name = f"{name}_{index}.png"
@@ -92,6 +93,7 @@ if __name__ == "__main__":
     create_dir("exp_data/test/mask/")
 
     """ Apply clustering threshold """
+    """
     metric_data = pd.read_csv('data/training/pre_training_metrics.csv')
     outliers = getOutliers(metric_data)
     delImgArr = []
@@ -106,6 +108,7 @@ if __name__ == "__main__":
         mask_file = filename[:2] + '_manual1.gif'
         mask = os.path.join(mask_path, mask_file)
         train_y.remove(mask)
+    """
 
     """ Apply intensity measure """
 
@@ -118,4 +121,4 @@ if __name__ == "__main__":
 
     """ Data augmentation """
     augment_data(train_x, train_y, "exp_data/train/", augment=False)
-    augment_data(test_x, test_y, "exp_data/test/", augment=False)
+    augment_data(test_x, test_y, "exp_data/test/", augment=False) # don't apply augmentation to testing

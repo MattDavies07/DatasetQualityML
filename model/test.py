@@ -3,7 +3,9 @@ import os, time
 from operator import add
 import numpy as np
 from glob import glob
+import pandas as pd
 import cv2
+import csv
 from tqdm import tqdm
 import imageio
 import torch
@@ -14,10 +16,10 @@ from utils import create_dir, seeding
 
 def calculate_metrics(y_true, y_pred):
     """ Ground truth """
-    y_true = y_true.cpu().numpy()
-    y_true = y_true > 0.5
+    y_true = y_true.cpu().numpy() # because they are currently in torch tensor form
+    y_true = y_true > 0.5 # threshold of 0.5 applied.
     y_true = y_true.astype(np.uint8)
-    y_true = y_true.reshape(-1)
+    y_true = y_true.reshape(-1) #flatten the image
 
     """ Prediction """
     y_pred = y_pred.cpu().numpy()
@@ -37,8 +39,8 @@ def calculate_metrics(y_true, y_pred):
     return [score_jaccard, score_f1, score_recall, score_precision, score_acc]
 
 def mask_parse(mask):
-    mask = np.expand_dims(mask, axis=-1)    ## (512, 512, 1)
-    mask = np.concatenate([mask, mask, mask], axis=-1)  ## (512, 512, 3)
+    mask = np.expand_dims(mask, axis=-1)    ## (512, 512, 1) add last axis
+    mask = np.concatenate([mask, mask, mask], axis=-1)  ## (512, 512, 3) # add 3 channels so it can be concatenated for final image
     return mask
 
 def plot_confusion_matrix(tp, tn, fp, fn):
@@ -62,7 +64,7 @@ def plot_confusion_matrix(tp, tn, fp, fn):
 
 if __name__ == "__main__":
     """ Seeding """
-    seeding(42)
+    seeding(42) #don't change across code
 
     """ Folders """
     exp_datetime = time.strftime("%Y%m%d-%H%M%S")
@@ -89,6 +91,11 @@ if __name__ == "__main__":
 
     metrics_score = [0.0, 0.0, 0.0, 0.0, 0.0]
     time_taken = []
+    results_header = ['name', 'jaccard', 'f1', 'recall', 'precision', 'accuracy']
+    #results_df = pd.DataFrame(columns=results_header)
+    with open(os.path.join(exp_folder, "results.csv"), 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(results_header)
 
     for i, (x, y) in tqdm(enumerate(zip(test_x, test_y)), total=len(test_x)):
         """ Extract the name """
@@ -98,8 +105,8 @@ if __name__ == "__main__":
         image = cv2.imread(x, cv2.IMREAD_COLOR) ## (512, 512, 3)
         ## image = cv2.resize(image, size)
         x = np.transpose(image, (2, 0, 1))      ## (3, 512, 512)
-        x = x/255.0
-        x = np.expand_dims(x, axis=0)           ## (1, 3, 512, 512)
+        x = x/255.0 #normalise
+        x = np.expand_dims(x, axis=0)           ## (1, 3, 512, 512) create batch of one image - needs to be in batches
         x = x.astype(np.float32)
         x = torch.from_numpy(x)
         x = x.to(device)
@@ -118,18 +125,26 @@ if __name__ == "__main__":
             """ Prediction and Calculating FPS """
             start_time = time.time()
             pred_y = model(x)
-            pred_y = torch.sigmoid(pred_y)
+            pred_y = torch.sigmoid(pred_y) # apply sigmoid to get required mask
             total_time = time.time() - start_time
             time_taken.append(total_time)
 
 
             score = calculate_metrics(y, pred_y)
+            
+            f = open(os.path.join(exp_folder, "results.csv"), 'a', newline='')
+            writer = csv.writer(f)
+            row = [name] + score
+            print(row)
+            writer.writerow(row)
+            f.close()
+
             #print(confusion_matrix(y, pred_y))
             metrics_score = list(map(add, metrics_score, score))
-            pred_y = pred_y[0].cpu().numpy()        ## (1, 512, 512)
-            pred_y = np.squeeze(pred_y, axis=0)     ## (512, 512)
-            pred_y = pred_y > 0.5
-            pred_y = np.array(pred_y, dtype=np.uint8)
+            pred_y = pred_y[0].cpu().numpy()        ## (1, 512, 512) because pred mask is of (1, 1, 512, 512)
+            pred_y = np.squeeze(pred_y, axis=0)     ## (512, 512) remove channel first
+            pred_y = pred_y > 0.5 # apply threshold
+            pred_y = np.array(pred_y, dtype=np.uint8) # convert to numpy
 
         """ Saving masks """
         ori_mask = mask_parse(mask)
@@ -137,7 +152,7 @@ if __name__ == "__main__":
         line = np.ones((size[1], 10, 3)) * 128
 
         cat_images = np.concatenate(
-            [image, line, ori_mask, line, pred_y * 255], axis=1
+            [image, line, ori_mask, line, pred_y * 255], axis=1 # * 255 to undo normalisation.
         )
         cv2.imwrite(exp_folder + f"{name}.png", cat_images)
 
@@ -147,6 +162,15 @@ if __name__ == "__main__":
     precision = metrics_score[3]/len(test_x)
     acc = metrics_score[4]/len(test_x)
     print(f"Jaccard: {jaccard:1.4f} - F1: {f1:1.4f} - Recall: {recall:1.4f} - Precision: {precision:1.4f} - Acc: {acc:1.4f}")
+
+    f = open(os.path.join(exp_folder, "results.csv"), 'a', newline='')
+    writer = csv.writer(f)
+    name = 'global'
+    values = [jaccard, f1, recall, precision, acc]
+    row = [name] + values
+    print(row)
+    writer.writerow(row)
+    f.close()
 
     fps = 1/np.mean(time_taken)
     print("FPS: ", fps)

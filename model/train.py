@@ -52,7 +52,7 @@ def evaluate(model, loader, loss_fn, device):
 
 if __name__ == "__main__":
     """ Seeding """
-    seeding(42)
+    seeding(42) #42 just random number
 
     """ Directories """
     create_dir("files")
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     batch_size = 2
     num_epochs = 50
     lr = 1e-4
-    checkpoint_path = "files/checkpoint.pth"
+    checkpoint_path = "files/checkpoint.pth" #save trained model weights
 
     """ Dataset and loader """
     train_dataset = DriveDataset(train_x, train_y)
@@ -94,7 +94,7 @@ if __name__ == "__main__":
         num_workers=2
     )
 
-    device = torch.device('cuda')   ## GTX 1060 6GB
+    device = torch.device('cuda')   ## GPU
     model = build_unet()
     model = model.to(device)
 
