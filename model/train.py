@@ -6,49 +6,14 @@ from glob import glob
 import torch
 from torch.utils.data import DataLoader
 import torch.nn as nn
+from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.tensorboard import SummaryWriter
-
+from torchsummary import summary
 from data import DriveDataset
 from model import build_unet
+import numpy as np
 from loss import DiceLoss, DiceBCELoss
 from utils import seeding, create_dir, epoch_time
-
-def train(model, loader, optimizer, loss_fn, device):
-    epoch_loss = 0.0
-
-    model.train()
-    for x, y in loader:
-        x = x.to(device, dtype=torch.float32)
-        y = y.to(device, dtype=torch.float32)
-
-        optimizer.zero_grad()
-        y_pred = model(x)
-        loss = loss_fn(y_pred, y)
-        loss.backward()
-        optimizer.step()
-        epoch_loss += loss.item()
-
-        #epoch_len = len(train_dataset) // loader.batch_size
-        #writer.add_scalar("train_loss", loss.item(), epoch_len * epoch + step) #would need to pass in epoch and step variable
-
-    epoch_loss = epoch_loss/len(loader)
-    return epoch_loss
-
-def evaluate(model, loader, loss_fn, device):
-    epoch_loss = 0.0
-
-    model.eval()
-    with torch.no_grad():
-        for x, y in loader:
-            x = x.to(device, dtype=torch.float32)
-            y = y.to(device, dtype=torch.float32)
-
-            y_pred = model(x)
-            loss = loss_fn(y_pred, y)
-            epoch_loss += loss.item()
-
-        epoch_loss = epoch_loss/len(loader)
-    return epoch_loss
 
 if __name__ == "__main__":
     """ Seeding """
@@ -64,39 +29,51 @@ if __name__ == "__main__":
     valid_x = sorted(glob("../exp_data/test/image/*"))
     valid_y = sorted(glob("../exp_data/test/mask/*"))
 
-    data_str = f"Dataset Size:\nTrain: {len(train_x)} - Valid: {len(valid_x)}\n"
-    print(data_str)
 
     """ Hyperparameters """
     H = 512
     W = 512
     size = (H, W)
     batch_size = 2
-    num_epochs = 50
+    num_epochs = 100
     lr = 1e-4
     checkpoint_path = "files/checkpoint.pth" #save trained model weights
 
     """ Dataset and loader """
+
     train_dataset = DriveDataset(train_x, train_y)
-    valid_dataset = DriveDataset(valid_x, valid_y)
+    train_size = len(train_dataset)
+    indices = list(range(train_size))
+    split = int(np.floor(0.2 * train_size))
+    np.random.seed(42)
+    np.random.shuffle(indices)
+    train_indices, val_indices = indices[split:], indices[:split]
+
+    train_sampler = SubsetRandomSampler(train_indices)
+    val_sampler = SubsetRandomSampler(val_indices)
+
+    data_str = f"Dataset Size:\nTrain: {len(train_indices)} - Valid: {len(val_indices)}\n"
+    print(data_str)
 
     train_loader = DataLoader(
         dataset=train_dataset,
         batch_size=batch_size,
-        shuffle=True,
+        sampler=train_sampler,
         num_workers=2
     )
 
     valid_loader = DataLoader(
-        dataset=valid_dataset,
+        dataset=train_dataset,
         batch_size=batch_size,
-        shuffle=False,
+        sampler=val_sampler,
         num_workers=2
     )
 
     device = torch.device('cuda')   ## GPU
     model = build_unet()
     model = model.to(device)
+
+    summary(model, input_size=(3, 512, 512))
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, verbose=True)
@@ -110,7 +87,6 @@ if __name__ == "__main__":
     for epoch in range(num_epochs):
         start_time = time.time()
 
-        #train_loss = train(model, train_loader, optimizer, loss_fn, device)
         epoch_loss = 0.0
         step = 0
 
@@ -132,7 +108,6 @@ if __name__ == "__main__":
 
         train_loss = epoch_loss/len(train_loader)
 
-        #valid_loss = evaluate(model, valid_loader, loss_fn, device)
         epoch_loss = 0.0
 
         model.eval()

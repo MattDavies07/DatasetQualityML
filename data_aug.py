@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from numpy.lib.function_base import percentile
 import pandas as pd
 import cv2
 from glob import glob
@@ -40,7 +41,7 @@ def augment_data(images, masks, save_path, augment=True, gradient=False, intensi
         """ Reading image and mask """
         x = cv2.imread(x, cv2.IMREAD_COLOR)
         x = cv2.cvtColor(x, cv2.COLOR_BGR2GRAY)
-        y = imageio.mimread(y)[0] #use imageio library instead
+        y = imageio.mimread(y)[0]
 
         if gradient == True:
             boundaries = find_boundaries(y)
@@ -54,7 +55,7 @@ def augment_data(images, masks, save_path, augment=True, gradient=False, intensi
 
         if intensity == True:
             boundaries = find_boundaries(y)
-            y[boundaries == 1] = 255 - (255 - x[boundaries == 1])
+            y[boundaries == 1] = 255 - x[boundaries == 1]
 
         # Augmentation as small dataset
         if augment == True:
@@ -83,7 +84,7 @@ def augment_data(images, masks, save_path, augment=True, gradient=False, intensi
         index = 0
         for i, m in zip(X, Y):
             i = cv2.resize(i, size)
-            m = cv2.resize(m, size) #interpolation = cv2.INTER_NEAREST) #This is the issue the resize changes the pixel values!!
+            m = cv2.resize(m, size)
 
             tmp_image_name = f"{name}_{index}.png"
             tmp_mask_name = f"{name}_{index}.png"
@@ -111,9 +112,11 @@ if __name__ == "__main__":
     create_dir("exp_data/test/mask/")
 
     """ Apply clustering threshold """
+    # uncomment below section to apply clustering with percentile 
     """
     metric_data = pd.read_csv('data/training/pre_training_metrics.csv')
-    outliers = getOutliers(metric_data)
+    percentile = 85
+    outliers = getOutliers(metric_data, percentile)
     delImgArr = []
     for i, file in enumerate(train_x):
         filename = os.path.basename(file)
@@ -127,13 +130,12 @@ if __name__ == "__main__":
         mask = os.path.join(mask_path, mask_file)
         train_y.remove(mask)
     """
-
     """ Apply intensity measure """
-
-    print(f"Train: {len(train_x)} - {len(train_y)}")
-    print(f"Test: {len(test_x)} - {len(test_y)}")
 
 
     """ Data augmentation """
-    augment_data(train_x, train_y, "exp_data/train/", augment=False, gradient=False, intensity=True)
+    augment_data(train_x, train_y, "exp_data/train/", augment=True, gradient=False, intensity=False)
     augment_data(test_x, test_y, "exp_data/test/", augment=False, gradient=False, intensity=False) # don't apply augmentation to testing
+
+    print(f"Train: {len(train_x)} - {len(train_y)}")
+    print(f"Test: {len(test_x)} - {len(test_y)}")

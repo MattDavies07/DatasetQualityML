@@ -5,7 +5,9 @@ from sklearn import cluster
 from scipy.spatial.distance import cdist
 import pickle
 
-#TODO - Reference Code
+# Clustering method of finding centroids and distances, taken and adapted from
+# medium blog by A. Kubra Kuyucu. Can be viewed from this link:
+# https://medium.datadriveninvestor.com/outlier-detection-with-k-means-clustering-in-python-ee3ac1826fb0
 
 def dataPreprocess():
 	non_ref_data = pd.read_csv("data/training/training_metrics.csv")
@@ -32,32 +34,24 @@ def dataPreprocess():
 
 def train(data):
 	X = data.iloc[:,2:].values
-	km = cluster.KMeans(n_clusters=2).fit(X)
+	km = cluster.KMeans(n_clusters=1).fit(X)
 	filename = 'finalised_clustering.sav'
 	pickle.dump(km, open(filename, 'wb'))
 
-def getOutliers(data):
+def getOutliers(data, percentile=80):
 	X = data.iloc[:,2:].values
 
-	# obtaining the centers of the clusters
 	km = pickle.load(open('finalised_clustering.sav', 'rb'))
 	clusters = km.predict(X)
 	centroids = km.cluster_centers_
-	#print(centroids)
-	# points array will be used to reach the index easy
 	points = np.empty((0,len(X[0])), float)
-	# distances will be used to calculate outliers
 	distances = np.empty((0,len(X[0])), float)
-	# getting points and distances
+
 	for i, center_elem in enumerate(centroids):
-    	# cdist is used to calculate the distance between center and other points
 		distances = np.append(distances, cdist([center_elem],X[clusters == i], 'euclidean')) 
 		points = np.append(points, X[clusters == i], axis=0)
 
-	percentile = 80
-	# getting outliers whose distances are greater than some percentile
 	outliers = points[np.where(distances > np.percentile(distances, percentile))]
-	#print(outliers)
 	outliersArr = []
 	for index, row in data.iterrows():
 		for entry in outliers:

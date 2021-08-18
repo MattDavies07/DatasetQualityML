@@ -32,9 +32,6 @@ def calculate_metrics(y_true, y_pred):
     score_recall = recall_score(y_true, y_pred)
     score_precision = precision_score(y_true, y_pred)
     score_acc = accuracy_score(y_true, y_pred)
-    #score_matrix = confusion_matrix(y_true, y_pred)
-    #print(score_matrix)
-    #cv2.imwrite(f"results/{name}_cm.png", plot_confusion_matrix(score_matrix[0][0], score_matrix[0][1], score_matrix[1][0], score_matrix[1][1]))
 
     return [score_jaccard, score_f1, score_recall, score_precision, score_acc]
 
@@ -42,25 +39,6 @@ def mask_parse(mask):
     mask = np.expand_dims(mask, axis=-1)    ## (512, 512, 1) add last axis
     mask = np.concatenate([mask, mask, mask], axis=-1)  ## (512, 512, 3) # add 3 channels so it can be concatenated for final image
     return mask
-
-def plot_confusion_matrix(tp, tn, fp, fn):
-    im_rgb = np.zeros((tp.shape[0], tp.shape[1], 3), dtype=np.uint8)
-    imr = np.zeros((tp.shape[0], tp.shape[1]), dtype=np.uint8)
-    img = np.zeros((tp.shape[0], tp.shape[1]), dtype=np.uint8)
-    imb = np.zeros((tp.shape[0], tp.shape[1]), dtype=np.uint8)
-    imr[tp!=0] = 255
-    img[fp!=0] = 255
-    imb[fn!=0] = 255
-    # 'tn' is black
-    im_rgb[:,:,0] = imr
-    im_rgb[:,:,1] = img
-    im_rgb[:,:,2] = imb
-
-    return im_rgb
-    #plt.figure()
-    #plt.imshow(im_rgb)
-    #plt.axis('off')
-    #plt.show()
 
 if __name__ == "__main__":
     """ Seeding """
@@ -92,7 +70,6 @@ if __name__ == "__main__":
     metrics_score = [0.0, 0.0, 0.0, 0.0, 0.0]
     time_taken = []
     results_header = ['name', 'jaccard', 'f1', 'recall', 'precision', 'accuracy']
-    #results_df = pd.DataFrame(columns=results_header)
     with open(os.path.join(exp_folder, "results.csv"), 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(results_header)
@@ -125,7 +102,7 @@ if __name__ == "__main__":
             """ Prediction and Calculating FPS """
             start_time = time.time()
             pred_y = model(x)
-            pred_y = torch.sigmoid(pred_y) # apply sigmoid to get required mask
+            pred_y = torch.sigmoid(pred_y)
             total_time = time.time() - start_time
             time_taken.append(total_time)
 
@@ -139,7 +116,6 @@ if __name__ == "__main__":
             writer.writerow(row)
             f.close()
 
-            #print(confusion_matrix(y, pred_y))
             metrics_score = list(map(add, metrics_score, score))
             pred_y = pred_y[0].cpu().numpy()        ## (1, 512, 512) because pred mask is of (1, 1, 512, 512)
             pred_y = np.squeeze(pred_y, axis=0)     ## (512, 512) remove channel first
@@ -155,6 +131,7 @@ if __name__ == "__main__":
             [image, line, ori_mask, line, pred_y * 255], axis=1 # * 255 to undo normalisation.
         )
         cv2.imwrite(exp_folder + f"{name}.png", cat_images)
+        cv2.imwrite(exp_folder + f"{name}_pred.png", pred_y * 255)
 
     jaccard = metrics_score[0]/len(test_x)
     f1 = metrics_score[1]/len(test_x)

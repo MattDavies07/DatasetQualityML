@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import Dataset
 
 class DriveDataset(Dataset): #build data pipeline
-    def __init__(self, images_path, masks_path): #constructor
+    def __init__(self, images_path, masks_path):
 
         self.images_path = images_path
         self.masks_path = masks_path
@@ -14,7 +14,7 @@ class DriveDataset(Dataset): #build data pipeline
 
     def __getitem__(self, index):
         """ Reading image """
-        image = cv2.imread(self.images_path[index], cv2.IMREAD_COLOR) #Read as RGB image, possibly change to grayscale
+        image = cv2.imread(self.images_path[index], cv2.IMREAD_COLOR)
         image = image/255.0 ## (512, 512, 3)
         image = np.transpose(image, (2, 0, 1))  ## (3, 512, 512) #change to channel first approach for torch
         image = image.astype(np.float32)
