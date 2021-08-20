@@ -11,8 +11,6 @@ from skimage import metrics
 from sewar import full_ref
 import csv
 
-#TODO - reuse code and use for test class also?
-
 io.use_plugin('pil')
 iqa = DOM()
 training_folder = 'data/training/images'
@@ -36,7 +34,6 @@ for filename in os.listdir(training_folder):
     
 f.close()
 
-#TODO - calculate ref file
 ref_filename = '37_training.tif'
 ref_img = io.imread(os.path.join(training_folder, ref_filename))
 
