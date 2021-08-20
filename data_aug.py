@@ -32,7 +32,7 @@ def load_data(path):
 
 def augment_data(images, masks, save_path, augment=True, gradient=False, intensity=False):
     size = (512, 512)
-    neighbourhood = disk(1)
+    strel = disk(1)
 
     for idx, (x, y) in tqdm(enumerate(zip(images, masks)), total=len(images)):
         """ Extracting the name """
@@ -45,8 +45,8 @@ def augment_data(images, masks, save_path, augment=True, gradient=False, intensi
 
         if gradient == True:
             boundaries = find_boundaries(y)
-            eroded = erosion(x, neighbourhood)
-            dilated = dilation(x, neighbourhood)
+            eroded = erosion(x, strel)
+            dilated = dilation(x, strel)
             grad = dilated - eroded
             updated = grad * boundaries
             mask = updated == 0
